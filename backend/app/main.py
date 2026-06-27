@@ -14,7 +14,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "https://financehub-pro.vercel.app",  # ajuste após o deploy
+        "https://financehubpro-rust.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
