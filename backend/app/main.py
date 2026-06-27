@@ -12,7 +12,10 @@ app = FastAPI(title="FinanceHub API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # ajuste para o domínio do Vercel em produção
+    allow_origins=[
+        "http://localhost:5173",
+        "https://financehub-pro.vercel.app",  # ajuste após o deploy
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
