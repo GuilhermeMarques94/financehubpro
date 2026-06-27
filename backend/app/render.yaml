@@ -9,3 +9,5 @@ services:
         sync: false
       - key: SECRET_KEY
         generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.12.10
