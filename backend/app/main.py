@@ -26,22 +26,23 @@ app.add_middleware(
 def seed_admin():
     db = SessionLocal()
     try:
-        existe = db.query(Usuario).filter(Usuario.email == "guinis@financehub.com").first()
-        if not existe:
+        user = db.query(Usuario).filter(Usuario.email == "guinis@financehub.com").first()
+        novo_hash = hash_senha("senha@123")
+        if not user:
             db.add(Usuario(
                 nome="guinis", telefone="34984319104",
                 email="guinis@financehub.com",
-                senha_hash=hash_senha("senha@123")))
-            db.commit()
-            print(">>> SEED: usuário guinis criado")
+                senha_hash=novo_hash))
+            print(">>> SEED: usuário criado")
         else:
-            print(">>> SEED: usuário já existe")
+            user.senha_hash = novo_hash   # corrige a senha sempre
+            print(">>> SEED: senha resetada")
+        db.commit()
     except Exception as e:
         print(">>> SEED ERRO:", repr(e))
         db.rollback()
     finally:
         db.close()
-
 
 seed_admin()
 
