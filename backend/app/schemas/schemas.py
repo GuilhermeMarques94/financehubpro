@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Optional
 from uuid import UUID
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import UUID4, BaseModel, EmailStr, Field, condecimal
 
 class UsuarioCriar(BaseModel):
     nome: str
