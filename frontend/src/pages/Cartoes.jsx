@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
 import Modal from "../components/Modal";
-import { Plus, ShoppingCart, Receipt, Trash2 } from "lucide-react";
+import { Plus, ShoppingCart, Receipt, Trash2, Pencil } from "lucide-react";
 
 const brl = (v) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -15,9 +15,12 @@ export default function Cartoes() {
   const [modalCartao, setModalCartao] = useState(false);
   const [modalCompra, setModalCompra] = useState(false);
   const [modalFatura, setModalFatura] = useState(false);
+  const [compraEditId, setCompraEditId] = useState(null);
+
+  const compraVazia = { cartao_id:"", plano_conta_id:"", descricao:"", valor:0, data_compra:"", parcelas:1 };
 
   const [fCartao, setFCartao] = useState({ nome:"", banco_emissor:"", limite_total:0, melhor_dia_compra:1, dia_vencimento:10, bandeira:"", ativo:true });
-  const [fCompra, setFCompra] = useState({ cartao_id:"", plano_conta_id:"", descricao:"", valor:0, data_compra:"", parcelas:1 });
+  const [fCompra, setFCompra] = useState(compraVazia);
   const [fFatura, setFFatura] = useState({ cartao_id:"", banco_id:"", competencia:"", data_pagamento:"" });
 
   const carregar = () => api.get("/cartoes").then(r => setDados(r.data));
@@ -38,12 +41,38 @@ export default function Cartoes() {
     setModalCartao(false); carregar();
   };
 
+  const abrirNovaCompra = () => {
+    setFCompra(compraVazia); setCompraEditId(null); setModalCompra(true);
+  };
+
+  const editarCompra = (c) => {
+    setFCompra({
+      cartao_id: c.cartao_id, plano_conta_id: c.plano_conta_id || "",
+      descricao: c.descricao, valor: c.valor,
+      data_compra: c.data_compra, parcelas: c.parcelas,
+    });
+    setCompraEditId(c.id); setModalCompra(true);
+  };
+
+  const fecharModalCompra = () => { setModalCompra(false); setCompraEditId(null); };
+
   const salvarCompra = async (e) => {
     e.preventDefault();
     const p = { ...fCompra, valor: parseFloat(fCompra.valor), parcelas: +fCompra.parcelas };
     if (!p.plano_conta_id) p.plano_conta_id = null;
-    await api.post("/cartoes/compras", p);
-    setModalCompra(false); carregar(); carregarCompras();
+    try {
+      if (compraEditId) await api.put(`/cartoes/compras/${compraEditId}`, p);
+      else await api.post("/cartoes/compras", p);
+      fecharModalCompra(); carregar(); carregarCompras();
+    } catch (err) { alert(err.response?.data?.detail || "Erro ao salvar compra."); }
+  };
+
+  const excluirCompra = async (c) => {
+    if (!confirm(`Excluir a compra "${c.descricao}" (${brl(c.valor)})?`)) return;
+    try {
+      await api.delete(`/cartoes/compras/${c.id}`);
+      carregar(); carregarCompras();
+    } catch (err) { alert(err.response?.data?.detail || "Erro ao excluir."); }
   };
 
   const pagarFatura = async (e) => {
@@ -77,7 +106,7 @@ export default function Cartoes() {
         <h1 className="page-title">Cartões de Crédito</h1>
         <div style={{display:"flex",gap:10}}>
           <button className="btn btn-outline" onClick={() => setModalFatura(true)}><Receipt size={16} /> Pagar Fatura</button>
-          <button className="btn btn-outline" onClick={() => setModalCompra(true)}><ShoppingCart size={16} /> Nova Compra</button>
+          <button className="btn btn-outline" onClick={abrirNovaCompra}><ShoppingCart size={16} /> Nova Compra</button>
           <button className="btn" onClick={() => setModalCartao(true)}><Plus size={16} /> Novo Cartão</button>
         </div>
       </div>
@@ -119,12 +148,20 @@ export default function Cartoes() {
       </div>
       <div className="table-wrap">
         <table>
-          <thead><tr><th>Data</th><th>Descrição</th><th>Valor</th><th>Status</th></tr></thead>
+          <thead><tr><th>Data</th><th>Descrição</th><th>Valor</th><th>Status</th><th></th></tr></thead>
           <tbody>
             {compras.map(c => (
               <tr key={c.id}>
                 <td>{c.data_compra}</td><td>{c.descricao}</td><td>{brl(c.valor)}</td>
                 <td><span className={`badge ${c.paga ? "pago" : "pendente"}`}>{c.paga ? "Paga" : "Em fatura"}</span></td>
+                <td>
+                  {!c.paga && (
+                    <div style={{display:"flex",gap:12}}>
+                      <Pencil size={16} style={{cursor:"pointer",color:"var(--primary)"}} onClick={() => editarCompra(c)} />
+                      <Trash2 size={16} style={{cursor:"pointer",color:"var(--danger)"}} onClick={() => excluirCompra(c)} />
+                    </div>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -178,7 +215,7 @@ export default function Cartoes() {
       )}
 
       {modalCompra && (
-        <Modal title="Nova Compra" onClose={() => setModalCompra(false)}>
+        <Modal title={compraEditId ? "Editar Compra" : "Nova Compra"} onClose={fecharModalCompra}>
           <form onSubmit={salvarCompra}>
             <label>Cartão</label>
             <select value={fCompra.cartao_id} onChange={upCp("cartao_id")} required>
@@ -195,7 +232,7 @@ export default function Cartoes() {
             <label>Data da Compra</label><input className="input" type="date" value={fCompra.data_compra} onChange={upCp("data_compra")} required />
             <label>Parcelas</label><input className="input" type="number" min="1" value={fCompra.parcelas} onChange={upCp("parcelas")} />
             <div className="modal-actions">
-              <button type="button" className="btn btn-outline" onClick={() => setModalCompra(false)}>Cancelar</button>
+              <button type="button" className="btn btn-outline" onClick={fecharModalCompra}>Cancelar</button>
               <button className="btn">Salvar</button>
             </div>
           </form>

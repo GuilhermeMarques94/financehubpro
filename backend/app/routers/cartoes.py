@@ -72,3 +72,31 @@ def estornar(fatura_id, db: Session = Depends(get_db), u: Usuario = Depends(get_
         return estornar_fatura(db, u.id, fatura_id)
     except ValueError as e:
         raise HTTPException(404, str(e))
+
+@router.put("/compras/{compra_id}")
+def editar_compra(compra_id, d: CompraCartaoCriar, db: Session = Depends(get_db),
+                  u: Usuario = Depends(get_usuario_atual)):
+    c = db.query(CompraCartao).filter(CompraCartao.id == compra_id,
+                                      CompraCartao.usuario_id == u.id).first()
+    if not c:
+        raise HTTPException(404, "Compra não encontrada")
+    if c.paga:
+        raise HTTPException(400, "Compra já está em uma fatura paga. Estorne a fatura antes de editar.")
+    if not db.query(Cartao).filter(Cartao.id == d.cartao_id, Cartao.usuario_id == u.id).first():
+        raise HTTPException(404, "Cartão não encontrado")
+    for k, v in d.model_dump().items():
+        setattr(c, k, v)
+    db.commit(); db.refresh(c)
+    return {"id": str(c.id)}
+
+@router.delete("/compras/{compra_id}")
+def excluir_compra(compra_id, db: Session = Depends(get_db),
+                   u: Usuario = Depends(get_usuario_atual)):
+    c = db.query(CompraCartao).filter(CompraCartao.id == compra_id,
+                                      CompraCartao.usuario_id == u.id).first()
+    if not c:
+        raise HTTPException(404, "Compra não encontrada")
+    if c.paga:
+        raise HTTPException(400, "Compra já está em uma fatura paga. Estorne a fatura antes de excluir.")
+    db.delete(c); db.commit()
+    return {"ok": True}
