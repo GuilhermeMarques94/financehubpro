@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   LayoutDashboard, Landmark, ListTree, ArrowLeftRight,
-  CreditCard, TrendingUp, LogOut, Menu
+  CreditCard, TrendingUp, LogOut, Menu, Repeat
 } from "lucide-react";
 
 const nav = [
@@ -11,6 +11,7 @@ const nav = [
   { to: "/bancos", icon: Landmark, label: "Bancos" },
   { to: "/plano-contas", icon: ListTree, label: "Plano de Contas" },
   { to: "/movimentacoes", icon: ArrowLeftRight, label: "Movimentações" },
+  { to: "/transferencias", icon: Repeat, label: "Transferências" },
   { to: "/cartoes", icon: CreditCard, label: "Cartões" },
   { to: "/fluxo", icon: TrendingUp, label: "Fluxo de Caixa" },
 ];

@@ -53,6 +53,9 @@ class Movimentacao(Base):
     observacoes = Column(Text)
     origem_fatura_id = Column(UUID(as_uuid=True))
     criado_em = Column(DateTime(timezone=True), server_default=func.now())
+    eh_transferencia = Column(Boolean, default=False)
+    transferencia_par_id = Column(UUID(as_uuid=True))
+
 
 class Cartao(Base):
     __tablename__ = "cartoes"

@@ -20,6 +20,7 @@ def dashboard(db: Session = Depends(get_db), u: Usuario = Depends(get_usuario_at
         return float(db.query(func.coalesce(func.sum(Movimentacao.valor), 0)).filter(
             Movimentacao.usuario_id == u.id, Movimentacao.tipo == tipo,
             Movimentacao.situacao == "pago",
+            Movimentacao.eh_transferencia == False,
             extract("month", Movimentacao.data_lancamento) == hoje.month,
             extract("year", Movimentacao.data_lancamento) == hoje.year).scalar())
 

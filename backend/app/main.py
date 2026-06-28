@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import Base, engine, SessionLocal
 from app.core.security import hash_senha
 from app.models.models import Usuario
-from app.routers import auth, bancos, plano_contas, movimentacoes, cartoes, dashboard, fluxo
+from app.routers import auth, bancos, plano_contas, movimentacoes, cartoes, dashboard, fluxo, transferencias
 
 Base.metadata.create_all(bind=engine)
 
@@ -53,6 +53,7 @@ app.include_router(movimentacoes.router)
 app.include_router(cartoes.router)
 app.include_router(fluxo.router)
 app.include_router(dashboard.router)
+app.include_router(transferencias.router)
 
 @app.get("/")
 def health():

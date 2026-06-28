@@ -9,6 +9,7 @@ import PlanoContas from "./pages/PlanoContas";
 import Movimentacoes from "./pages/Movimentacoes";
 import Cartoes from "./pages/Cartoes";
 import Fluxo from "./pages/Fluxo";
+import Transferencias from "./pages/Transferencias";
 
 function Private({ children }) {
   const { user, loading } = useAuth();
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/cartoes" element={<Private><Cartoes /></Private>} />
           <Route path="/fluxo" element={<Private><Fluxo /></Private>} />
           <Route path="*" element={<Navigate to="/" />} />
+          <Route path="/transferencias" element={<Transferencias />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

@@ -50,6 +50,8 @@ class MovimentacaoCriar(BaseModel):
 class MovimentacaoOut(MovimentacaoCriar):
     id: UUID
     class Config: from_attributes = True
+    eh_transferencia: bool = False
+    transferencia_par_id: UUID4 | None = None
 
 class CartaoCriar(BaseModel):
     nome: str; banco_emissor: Optional[str] = None
@@ -68,3 +70,10 @@ class CompraCartaoCriar(BaseModel):
 class PagarFatura(BaseModel):
     cartao_id: UUID; banco_id: UUID
     competencia: str; data_pagamento: date
+
+class TransferenciaCriar(BaseModel):
+    banco_origem_id: UUID4
+    banco_destino_id: UUID4
+    valor: condecimal(gt=0)
+    descricao: str | None = None
+    data: date | None = None
