@@ -42,3 +42,29 @@ def pagar_fatura(db: Session, usuario_id, cartao_id, banco_id,
     db.commit()
     return {"fatura_id": str(fatura.id), "valor_total": float(total),
             "movimentacao_id": str(mov.id)}
+
+def estornar_fatura(db: Session, usuario_id, fatura_id):
+    """Desfaz o pagamento de uma fatura: reabre as compras, devolve o limite
+    e remove a movimentação bancária. Como se nunca tivesse existido."""
+    fatura = db.query(Fatura).join(Cartao, Cartao.id == Fatura.cartao_id).filter(
+        Fatura.id == fatura_id,
+        Cartao.usuario_id == usuario_id).first()
+    if not fatura:
+        raise ValueError("Fatura não encontrada")
+
+    # 1. Reabre as compras vinculadas (devolve o limite automaticamente)
+    db.query(CompraCartao).filter(
+        CompraCartao.fatura_id == fatura.id).update(
+        {"paga": False, "fatura_id": None}, synchronize_session=False)
+
+    # 2. Remove a movimentação bancária do pagamento
+    if fatura.movimentacao_id:
+        mov = db.query(Movimentacao).filter(
+            Movimentacao.id == fatura.movimentacao_id).first()
+        if mov:
+            db.delete(mov)
+
+    # 3. Remove a fatura
+    db.delete(fatura)
+    db.commit()
+    return {"ok": True}

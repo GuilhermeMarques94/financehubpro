@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
 import Modal from "../components/Modal";
-import { Plus, ShoppingCart, Receipt } from "lucide-react";
+import { Plus, ShoppingCart, Receipt, Trash2 } from "lucide-react";
 
 const brl = (v) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -10,6 +10,7 @@ export default function Cartoes() {
   const [bancos, setBancos] = useState([]);
   const [planos, setPlanos] = useState([]);
   const [compras, setCompras] = useState([]);
+  const [faturas, setFaturas] = useState([]);
   const [filtroCartao, setFiltroCartao] = useState("");
   const [modalCartao, setModalCartao] = useState(false);
   const [modalCompra, setModalCompra] = useState(false);
@@ -21,13 +22,14 @@ export default function Cartoes() {
 
   const carregar = () => api.get("/cartoes").then(r => setDados(r.data));
   const carregarCompras = () => api.get("/cartoes/compras", { params: filtroCartao ? { cartao_id: filtroCartao } : {} }).then(r => setCompras(r.data));
+  const carregarFaturas = () => api.get("/cartoes/faturas", { params: filtroCartao ? { cartao_id: filtroCartao } : {} }).then(r => setFaturas(r.data));
 
   useEffect(() => {
     carregar();
     api.get("/bancos").then(r => setBancos(r.data));
     api.get("/plano-contas").then(r => setPlanos(r.data));
   }, []);
-  useEffect(() => { carregarCompras(); }, [filtroCartao]);
+  useEffect(() => { carregarCompras(); carregarFaturas(); }, [filtroCartao]);
 
   const salvarCartao = async (e) => {
     e.preventDefault();
@@ -48,9 +50,20 @@ export default function Cartoes() {
     e.preventDefault();
     try {
       await api.post("/cartoes/pagar-fatura", fFatura);
-      setModalFatura(false); carregar(); carregarCompras();
+      setModalFatura(false); carregar(); carregarCompras(); carregarFaturas();
       alert("Fatura paga! Saída gerada na conta bancária.");
     } catch (err) { alert(err.response?.data?.detail || "Erro ao pagar fatura."); }
+  };
+
+  const estornarFatura = async (f) => {
+    if (!confirm(`Estornar a fatura ${f.competencia} (${brl(f.valor_total)})?\n\n` +
+      `As compras voltarão a "Em fatura", o limite será devolvido e a saída ` +
+      `bancária será removida. Esta ação não pode ser desfeita.`)) return;
+    try {
+      await api.delete(`/cartoes/faturas/${f.id}`);
+      carregar(); carregarCompras(); carregarFaturas();
+      alert("Fatura estornada com sucesso!");
+    } catch (err) { alert(err.response?.data?.detail || "Erro ao estornar."); }
   };
 
   const rg = dados.resumo_geral;
@@ -87,8 +100,8 @@ export default function Cartoes() {
               </div>
               <div className="label">Utilizado: <span className="value red" style={{fontSize:14}}>{brl(c.utilizado)}</span></div>
               <div className="label">Disponível: <span className="value green" style={{fontSize:14}}>{brl(c.disponivel)}</span></div>
-              <div style={{height:6,background:"#2a3441",borderRadius:4,marginTop:10,overflow:"hidden"}}>
-                <div style={{width:`${pct}%`,height:"100%",background: pct>80?"#ef4444":"#3b82f6"}} />
+              <div style={{height:6,background:"var(--border)",borderRadius:4,marginTop:10,overflow:"hidden"}}>
+                <div style={{width:`${pct}%`,height:"100%",background: pct>80?"var(--danger)":"var(--primary)"}} />
               </div>
               <div className="label" style={{marginTop:6}}>Limite: {brl(c.limite_total)}</div>
             </div>
@@ -117,6 +130,34 @@ export default function Cartoes() {
           </tbody>
         </table>
       </div>
+
+      {/* Faturas Pagas */}
+      {faturas.length > 0 && (
+        <>
+          <h2 style={{ fontSize: 18, marginTop: 24, marginBottom: 12 }}>Faturas Pagas</h2>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Competência</th><th>Vencimento</th><th>Valor</th><th>Status</th><th></th></tr></thead>
+              <tbody>
+                {faturas.map(f => (
+                  <tr key={f.id}>
+                    <td>{f.competencia}</td>
+                    <td>{f.data_vencimento}</td>
+                    <td>{brl(f.valor_total)}</td>
+                    <td><span className={`badge ${f.paga ? "pago" : "pendente"}`}>{f.paga ? "Paga" : "Aberta"}</span></td>
+                    <td>
+                      <button className="btn btn-outline" style={{ padding: "6px 12px", fontSize: 13 }}
+                              onClick={() => estornarFatura(f)}>
+                        <Trash2 size={14} /> Estornar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
 
       {/* Modais */}
       {modalCartao && (

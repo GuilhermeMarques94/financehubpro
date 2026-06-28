@@ -42,5 +42,9 @@ def editar(mid, d: MovimentacaoCriar, db: Session = Depends(get_db), u: Usuario 
 def excluir(mid, db: Session = Depends(get_db), u: Usuario = Depends(get_usuario_atual)):
     m = db.query(Movimentacao).filter(Movimentacao.id == mid, Movimentacao.usuario_id == u.id).first()
     if not m: raise HTTPException(404, "Movimentação não encontrada")
+    if m.origem_fatura_id:
+        raise HTTPException(400, "Esta movimentação é o pagamento de uma fatura. "
+                                 "Estorne a fatura na tela de Cartões.")
     db.delete(m); db.commit()
     return {"ok": True}
+

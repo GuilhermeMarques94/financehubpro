@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import get_usuario_atual
-from app.models.models import Cartao, CompraCartao, Usuario
+from app.models.models import Cartao, CompraCartao, Usuario, Fatura
 from app.schemas.schemas import CartaoCriar, CompraCartaoCriar, PagarFatura
 from app.services.calculos import resumo_cartao
-from app.services.fatura_service import pagar_fatura
+from app.services.fatura_service import pagar_fatura, estornar_fatura
 
 router = APIRouter(prefix="/cartoes", tags=["Cartões"])
 
@@ -48,3 +48,27 @@ def pagar(d: PagarFatura, db: Session = Depends(get_db), u: Usuario = Depends(ge
         return pagar_fatura(db, u.id, d.cartao_id, d.banco_id, d.competencia, d.data_pagamento)
     except ValueError as e:
         raise HTTPException(400, str(e))
+
+@router.get("/faturas")
+def listar_faturas(cartao_id: str | None = None, db: Session = Depends(get_db),
+                   u: Usuario = Depends(get_usuario_atual)):
+    q = db.query(Fatura).join(Cartao, Cartao.id == Fatura.cartao_id).filter(
+        Cartao.usuario_id == u.id)
+    if cartao_id:
+        q = q.filter(Fatura.cartao_id == cartao_id)
+    faturas = q.order_by(Fatura.data_vencimento.desc()).all()
+    return [{
+        "id": str(f.id),
+        "cartao_id": str(f.cartao_id),
+        "competencia": f.competencia,
+        "valor_total": float(f.valor_total),
+        "data_vencimento": str(f.data_vencimento),
+        "paga": f.paga,
+    } for f in faturas]
+
+@router.delete("/faturas/{fatura_id}")
+def estornar(fatura_id, db: Session = Depends(get_db), u: Usuario = Depends(get_usuario_atual)):
+    try:
+        return estornar_fatura(db, u.id, fatura_id)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
