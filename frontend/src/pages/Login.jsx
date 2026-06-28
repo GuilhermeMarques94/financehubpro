@@ -28,9 +28,10 @@ export default function Login() {
     resize();
     window.addEventListener("resize", resize);
 
-    const onMove = (e) => {
+    // gera partículas a partir de uma posição (mouse OU toque)
+    const emit = (clientX, clientY) => {
       mouse.px = mouse.x; mouse.py = mouse.y;
-      mouse.x = e.clientX; mouse.y = e.clientY;
+      mouse.x = clientX; mouse.y = clientY;
       const vx = mouse.x - mouse.px;
       const vy = mouse.y - mouse.py;
       const speed = Math.min(Math.hypot(vx, vy), 40);
@@ -49,7 +50,25 @@ export default function Login() {
         });
       }
     };
+
+    // mouse (desktop)
+    const onMove = (e) => emit(e.clientX, e.clientY);
+
+    // touch (mobile)
+    const onTouchStart = (e) => {
+      const t = e.touches[0];
+      // reseta posição p/ não gerar "salto" de velocidade no 1º toque
+      mouse.x = mouse.px = t.clientX;
+      mouse.y = mouse.py = t.clientY;
+    };
+    const onTouchMove = (e) => {
+      const t = e.touches[0];
+      emit(t.clientX, t.clientY);
+    };
+
     window.addEventListener("mousemove", onMove);
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
 
     const loop = () => {
       ctx.clearRect(0, 0, w, h);
@@ -76,6 +95,8 @@ export default function Login() {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
       window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
     };
   }, []);
 
