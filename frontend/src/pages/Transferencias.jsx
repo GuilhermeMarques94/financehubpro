@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import api from "../api/axios";
 import Modal from "../components/Modal";
 import { Plus, Trash2, ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 
 const brl = (v) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const vazio = { banco_origem_id: "", banco_destino_id: "", valor: 0, descricao: "", data: "" };
@@ -12,6 +14,7 @@ export default function Transferencias() {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(vazio);
   const [erro, setErro] = useState("");
+  const navigate = useNavigate();
 
   const carregar = () => api.get("/transferencias").then(r => setLista(r.data));
 
@@ -49,7 +52,12 @@ export default function Transferencias() {
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">Transferências</h1>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button className="btn btn-outline" onClick={() => navigate(-1)}>
+            <ArrowLeft size={16} /> Voltar
+          </button>
+          <h1 className="page-title">Transferências</h1>
+        </div>
         <button className="btn" onClick={() => { setForm(vazio); setErro(""); setModal(true); }}>
           <Plus size={16} /> Nova Transferência
         </button>

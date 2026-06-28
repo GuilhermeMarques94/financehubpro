@@ -1,13 +1,20 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const pageRef = useRef(null);
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
+
+  const handleMouse = (e) => {
+    if (!pageRef.current) return;
+    pageRef.current.style.setProperty("--mx", `${e.clientX}px`);
+    pageRef.current.style.setProperty("--my", `${e.clientY}px`);
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -21,7 +28,7 @@ export default function Login() {
   };
 
   return (
-    <div className="auth-page">
+    <div className="auth-page" ref={pageRef} onMouseMove={handleMouse}>
       <form className="auth-card" onSubmit={submit}>
         <h1>FinanceHub</h1>
         <p className="sub">Acesse sua conta</p>
@@ -30,7 +37,7 @@ export default function Login() {
         <input className="input" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
         <label>Senha</label>
         <input className="input" type="password" value={senha} onChange={e => setSenha(e.target.value)} required />
-        <button className="btn" style={{ width: "100%" }}>Entrar</button>
+        <button className="btn" style={{ width: "100%", justifyContent: "center" }}>Entrar</button>
         <p className="auth-link">Não tem conta? <Link to="/registro">Criar conta</Link></p>
       </form>
     </div>
