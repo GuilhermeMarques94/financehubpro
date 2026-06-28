@@ -126,7 +126,9 @@ export default function Login() {
         <label>Senha</label>
         <input className="input" type="password" value={senha} onChange={e => setSenha(e.target.value)} required />
         <button className="btn" style={{ width: "100%", justifyContent: "center" }}>Entrar</button>
-        <p className="auth-link">Não tem conta? <Link to="/registro">Criar conta</Link></p>
+        <p className="auth-link">Não tem conta? Contate o administrador. Se não conhece ele, saia da página. Tchau!
+  {/* <Link to="/registro">Criar conta</Link> */}
+</p>
       </form>
     </div>
   );
