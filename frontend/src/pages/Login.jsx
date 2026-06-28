@@ -17,6 +17,10 @@ export default function Login() {
     const particles = [];
     const mouse = { x: 0, y: 0, px: 0, py: 0 };
 
+    // pega cor do tema (fallback azul)
+    const css = getComputedStyle(document.documentElement);
+    const themeColor = (css.getPropertyValue("--primary").trim() || "#6366f1");
+
     const resize = () => {
       w = canvas.width = window.innerWidth;
       h = canvas.height = window.innerHeight;
@@ -27,57 +31,43 @@ export default function Login() {
     const onMove = (e) => {
       mouse.px = mouse.x; mouse.py = mouse.y;
       mouse.x = e.clientX; mouse.y = e.clientY;
-      // velocidade do cursor
       const vx = mouse.x - mouse.px;
       const vy = mouse.y - mouse.py;
       const speed = Math.min(Math.hypot(vx, vy), 40);
-      // quanto mais rápido, mais triângulos
-      const count = 1 + Math.floor(speed / 6);
+      const count = 2 + Math.floor(speed / 4); // mais rápido = mais poeira
       for (let i = 0; i < count; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spread = Math.random() * 12;            // dispersão lateral
         particles.push({
-          x: mouse.x, y: mouse.y,
-          vx: (Math.random() - 0.5) * 1.5 - vx * 0.05,
-          vy: (Math.random() - 0.5) * 1.5 - vy * 0.05,
-          size: 4 + speed * 0.4 + Math.random() * 4,
-          rot: Math.random() * Math.PI * 2,
-          spin: (Math.random() - 0.5) * 0.2,
+          x: mouse.x + Math.cos(ang) * spread,
+          y: mouse.y + Math.sin(ang) * spread,
+          vx: Math.cos(ang) * (Math.random() * 0.4) - vx * 0.02,
+          vy: Math.sin(ang) * (Math.random() * 0.4) - vy * 0.02,
+          size: Math.random() < 0.15 ? 2.2 : 1,        // alguns pontos maiores
           life: 1,
-          decay: 0.012 + Math.random() * 0.02,
-          hue: 200 + Math.random() * 80, // azul → roxo
+          decay: 0.006 + Math.random() * 0.012,        // rastro mais longo
         });
       }
     };
     window.addEventListener("mousemove", onMove);
-
-    const drawTriangle = (p) => {
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.rot);
-      ctx.globalAlpha = p.life;
-      ctx.beginPath();
-      const s = p.size * p.life;
-      ctx.moveTo(0, -s);
-      ctx.lineTo(s * 0.866, s * 0.5);
-      ctx.lineTo(-s * 0.866, s * 0.5);
-      ctx.closePath();
-      ctx.fillStyle = `hsl(${p.hue}, 90%, 65%)`;
-      ctx.shadowBlur = 12;
-      ctx.shadowColor = `hsl(${p.hue}, 90%, 65%)`;
-      ctx.fill();
-      ctx.restore();
-    };
 
     const loop = () => {
       ctx.clearRect(0, 0, w, h);
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         p.x += p.vx; p.y += p.vy;
-        p.vx *= 0.96; p.vy *= 0.96;
-        p.rot += p.spin;
+        p.vx *= 0.97; p.vy *= 0.97;
         p.life -= p.decay;
         if (p.life <= 0) { particles.splice(i, 1); continue; }
-        drawTriangle(p);
+        ctx.globalAlpha = p.life;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * (0.6 + p.life * 0.4), 0, Math.PI * 2);
+        ctx.fillStyle = themeColor;
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = themeColor;
+        ctx.fill();
       }
+      ctx.globalAlpha = 1;
       raf = requestAnimationFrame(loop);
     };
     loop();
