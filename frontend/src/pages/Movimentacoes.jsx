@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
 import Modal from "../components/Modal";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Pencil, Check } from "lucide-react";
 
 const brl = (v) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const vazio = { banco_id: "", plano_conta_id: "", descricao: "", valor: 0, tipo: "saida",
@@ -13,6 +13,7 @@ export default function Movimentacoes() {
   const [planos, setPlanos] = useState([]);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(vazio);
+  const [editId, setEditId] = useState(null);
   const [filtros, setFiltros] = useState({ banco_id: "", situacao: "", tipo: "" });
 
   const carregar = () => {
@@ -26,16 +27,56 @@ export default function Movimentacoes() {
   }, []);
   useEffect(() => { carregar(); }, [filtros]);
 
+  const abrirNova = () => { setForm(vazio); setEditId(null); setModal(true); };
+
+  const abrirEdicao = (m) => {
+    setForm({
+      banco_id: m.banco_id || "",
+      plano_conta_id: m.plano_conta_id || "",
+      descricao: m.descricao || "",
+      valor: m.valor || 0,
+      tipo: m.tipo || "saida",
+      data_lancamento: m.data_lancamento || "",
+      data_vencimento: m.data_vencimento || "",
+      data_pagamento: m.data_pagamento || "",
+      situacao: m.situacao || "pendente",
+      observacoes: m.observacoes || "",
+    });
+    setEditId(m.id);
+    setModal(true);
+  };
+
   const salvar = async (e) => {
     e.preventDefault();
     const p = { ...form, valor: parseFloat(form.valor) };
     Object.keys(p).forEach(k => p[k] === "" && (p[k] = null));
-    await api.post("/movimentacoes", p);
-    setModal(false); setForm(vazio); carregar();
+    if (editId) {
+      await api.put(`/movimentacoes/${editId}`, p);
+    } else {
+      await api.post("/movimentacoes", p);
+    }
+    setModal(false); setForm(vazio); setEditId(null); carregar();
   };
 
   const excluir = async (id) => {
     if (confirm("Excluir?")) { await api.delete(`/movimentacoes/${id}`); carregar(); }
+  };
+
+  const marcarPago = async (m) => {
+    const p = {
+      banco_id: m.banco_id,
+      plano_conta_id: m.plano_conta_id || null,
+      descricao: m.descricao,
+      valor: parseFloat(m.valor),
+      tipo: m.tipo,
+      data_lancamento: m.data_lancamento,
+      data_vencimento: m.data_vencimento || null,
+      data_pagamento: new Date().toISOString().slice(0, 10),
+      situacao: "pago",
+      observacoes: m.observacoes || null,
+    };
+    await api.put(`/movimentacoes/${m.id}`, p);
+    carregar();
   };
 
   const up = (k) => (e) => setForm({ ...form, [k]: e.target.value });
@@ -46,7 +87,7 @@ export default function Movimentacoes() {
     <div>
       <div className="page-header">
         <h1 className="page-title">Movimentações</h1>
-        <button className="btn" onClick={() => { setForm(vazio); setModal(true); }}><Plus size={16} /> Nova Movimentação</button>
+        <button className="btn" onClick={abrirNova}><Plus size={16} /> Nova Movimentação</button>
       </div>
 
       <div className="filters">
@@ -60,17 +101,27 @@ export default function Movimentacoes() {
 
       <div className="table-wrap">
         <table>
-          <thead><tr><th>Data</th><th>Descrição</th><th>Banco</th><th>Tipo</th><th>Valor</th><th>Situação</th><th></th></tr></thead>
+          <thead><tr><th>Data</th><th>Vencimento</th><th>Descrição</th><th>Banco</th><th>Tipo</th><th>Valor</th><th>Situação</th><th></th></tr></thead>
           <tbody>
             {lista.map(m => (
               <tr key={m.id}>
                 <td>{m.data_lancamento}</td>
+                <td>{m.data_vencimento || "-"}</td>
                 <td>{m.descricao}</td>
                 <td>{nomeBanco(m.banco_id)}</td>
                 <td className={m.tipo === "entrada" ? "value green" : "value red"} style={{fontSize:14}}>{m.tipo}</td>
                 <td>{brl(m.valor)}</td>
                 <td><span className={`badge ${m.situacao}`}>{m.situacao}</span></td>
-                <td><Trash2 size={16} style={{cursor:"pointer",color:"#ef4444"}} onClick={() => excluir(m.id)} /></td>
+                <td style={{whiteSpace:"nowrap"}}>
+                  {m.situacao !== "pago" && (
+                    <Check size={16} style={{cursor:"pointer",color:"#22c55e",marginRight:12}}
+                      title="Marcar como pago" onClick={() => marcarPago(m)} />
+                  )}
+                  <Pencil size={16} style={{cursor:"pointer",color:"#6366f1",marginRight:12}}
+                    title="Editar" onClick={() => abrirEdicao(m)} />
+                  <Trash2 size={16} style={{cursor:"pointer",color:"#ef4444"}}
+                    title="Excluir" onClick={() => excluir(m.id)} />
+                </td>
               </tr>
             ))}
           </tbody>
@@ -78,7 +129,7 @@ export default function Movimentacoes() {
       </div>
 
       {modal && (
-        <Modal title="Nova Movimentação" onClose={() => setModal(false)}>
+        <Modal title={editId ? "Editar Movimentação" : "Nova Movimentação"} onClose={() => setModal(false)}>
           <form onSubmit={salvar}>
             <label>Banco</label>
             <select value={form.banco_id} onChange={up("banco_id")} required>
