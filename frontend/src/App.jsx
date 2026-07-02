@@ -10,6 +10,7 @@ import Movimentacoes from "./pages/Movimentacoes";
 import Cartoes from "./pages/Cartoes";
 import Fluxo from "./pages/Fluxo";
 import Transferencias from "./pages/Transferencias";
+import Relatorio from "./pages/Relatorio";
 
 function Private({ children }) {
   const { user, loading } = useAuth();
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="/fluxo" element={<Private><Fluxo /></Private>} />
           <Route path="*" element={<Navigate to="/" />} />
           <Route path="/transferencias" element={<Transferencias />} />
+          <Route path="/relatorio" element={<Relatorio />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

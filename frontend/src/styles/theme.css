@@ -167,3 +167,11 @@ label { font-size: 13px; color: var(--text-muted); display: block; margin-bottom
   .main { margin-left: 0; width: 100%; padding: 70px 16px 16px; }
   .menu-toggle { display: block; }
 }
+
+.rel-table th, .rel-table td { text-align: right; padding: 6px 10px; font-size: 13px; }
+.rel-table th:first-child, .rel-table td:first-child { text-align: left; }
+.rel-header td { background: #1e293b; color: #fff; font-weight: 600; }
+.rel-despesa td { background: #334155; }
+.rel-cat td { background: #3b82f6; color: #fff; font-weight: 500; }
+.rel-sub td { background: transparent; }
+.rel-total td { background: #0f172a; color: #fff; font-weight: 700; }

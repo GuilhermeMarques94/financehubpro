@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   LayoutDashboard, Landmark, ListTree, ArrowLeftRight,
-  CreditCard, TrendingUp, LogOut, Menu, Repeat
+  CreditCard, TrendingUp, LogOut, Menu, Repeat, BarChart3
 } from "lucide-react";
 
 const nav = [
@@ -14,6 +14,7 @@ const nav = [
   { to: "/transferencias", icon: Repeat, label: "Transferências" },
   { to: "/cartoes", icon: CreditCard, label: "Cartões" },
   { to: "/fluxo", icon: TrendingUp, label: "Fluxo de Caixa" },
+  { to: "/relatorio", icon: BarChart3, label: "Relatório" },
 ];
 
 export default function Layout({ children }) {
