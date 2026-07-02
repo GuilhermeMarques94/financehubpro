@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import api from "../api/axios";
 
 const MESES = ["", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
@@ -8,13 +10,14 @@ const brl = (v) =>
   (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function Relatorio() {
-  const hoje = new Date();
-  const [qtdMeses, setQtdMeses] = useState(12);
+  const [qtdMeses, setQtdMeses] = useState(6);
   const [d, setD] = useState(null);
   const [aberto, setAberto] = useState({});   // setores: receitas, despesas, si, sf
   const [catAberta, setCatAberta] = useState({}); // categorias individuais
+  const navigate = useNavigate();
 
   const carregar = () => {
+    const hoje = new Date();
     api.get("/fluxo/relatorio", {
       params: {
         ref_ano: hoje.getFullYear(),
@@ -55,7 +58,12 @@ export default function Relatorio() {
   return (
     <div className="rel-page">
       <div className="page-header">
-        <h1 className="page-title">Relatório de Fluxo de Caixa</h1>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button className="btn btn-outline" onClick={() => navigate(-1)}>
+            <ArrowLeft size={16} /> Voltar
+          </button>
+          <h1 className="page-title" style={{ margin: 0 }}>Relatório de Fluxo de Caixa</h1>
+        </div>
         <div className="filters" style={{ margin: 0 }}>
           <button className="btn btn-outline rel-toggle-all" onClick={alternarTudo}>
             {todosAbertos ? "Recolher tudo" : "Expandir tudo"}
