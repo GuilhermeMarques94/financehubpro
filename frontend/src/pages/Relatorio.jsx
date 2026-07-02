@@ -8,31 +8,58 @@ const brl = (v) =>
   (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function Relatorio() {
-  const anoAtual = new Date().getFullYear();
-  const [ano, setAno] = useState(anoAtual);
+  const hoje = new Date();
   const [qtdMeses, setQtdMeses] = useState(12);
   const [d, setD] = useState(null);
+  const [aberto, setAberto] = useState({});   // setores: receitas, despesas, si, sf
+  const [catAberta, setCatAberta] = useState({}); // categorias individuais
 
   const carregar = () => {
-    api.get("/fluxo/relatorio", { params: { ano, meses: qtdMeses } })
-      .then(r => setD(r.data));
+    api.get("/fluxo/relatorio", {
+      params: {
+        ref_ano: hoje.getFullYear(),
+        ref_mes: hoje.getMonth() + 1,
+        meses: qtdMeses,
+      },
+    }).then(r => {
+      setD(r.data);
+      setAberto({ receitas: true, despesas: true, si: true, sf: true });
+      const cats = {};
+      r.data.despesas.forEach((_, i) => (cats[i] = true));
+      setCatAberta(cats);
+    });
   };
 
-  useEffect(() => { carregar(); }, [ano, qtdMeses]);
+  useEffect(() => { carregar(); }, [qtdMeses]);
 
-  if (!d) return <div>Carregando...</div>;
+  if (!d) return <div className="rel-loading">Carregando...</div>;
 
-  const cols = d.meses;
-  const anos = Array.from({ length: 6 }, (_, i) => anoAtual - i);
+  const cols = d.colunas;
+  const toggle = (k) => setAberto(s => ({ ...s, [k]: !s[k] }));
+  const toggleCat = (i) => setCatAberta(s => ({ ...s, [i]: !s[i] }));
+
+  const todosAbertos = Object.values(aberto).every(Boolean);
+  const alternarTudo = () => {
+    const novo = !todosAbertos;
+    setAberto({ receitas: novo, despesas: novo, si: novo, sf: novo });
+    const cats = {};
+    d.despesas.forEach((_, i) => (cats[i] = novo));
+    setCatAberta(cats);
+  };
+
+  const cell = (obj, k) => brl(obj[k]);
+  const Chevron = ({ open }) => (
+    <span className={`rel-chev ${open ? "open" : ""}`}>▸</span>
+  );
 
   return (
-    <div>
+    <div className="rel-page">
       <div className="page-header">
         <h1 className="page-title">Relatório de Fluxo de Caixa</h1>
         <div className="filters" style={{ margin: 0 }}>
-          <select value={ano} onChange={e => setAno(+e.target.value)}>
-            {anos.map(a => <option key={a} value={a}>{a}</option>)}
-          </select>
+          <button className="btn btn-outline rel-toggle-all" onClick={alternarTudo}>
+            {todosAbertos ? "Recolher tudo" : "Expandir tudo"}
+          </button>
           {[3, 6, 12].map(n => (
             <button key={n}
               className={`btn ${qtdMeses === n ? "" : "btn-outline"}`}
@@ -43,69 +70,114 @@ export default function Relatorio() {
         </div>
       </div>
 
-      <div className="table-wrap">
+      <div className="table-wrap rel-wrap">
         <table className="rel-table">
           <thead>
             <tr>
-              <th></th>
-              {cols.map(m => <th key={m}>{MESES[m]} {ano}</th>)}
+              <th className="rel-first"></th>
+              {cols.map(c => (
+                <th key={c.chave}>{MESES[c.mes]}<span className="rel-ano">{c.ano}</span></th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {/* RECEITAS */}
-            <tr className="rel-header"><td>Receitas</td>
-              {cols.map(m => <td key={m}>{brl(d.total_receitas[m])}</td>)}</tr>
-            {d.receitas.map((r, i) => (
-              <tr key={i} className="rel-sub"><td>{r.nome}</td>
-                {cols.map(m => <td key={m}>{brl(r.valores[m])}</td>)}</tr>
+            <tr className="rel-header rel-receita rel-clic" onClick={() => toggle("receitas")}>
+              <td><Chevron open={aberto.receitas} /> Receitas</td>
+              {cols.map(c => <td key={c.chave}>{cell(d.total_receitas, c.chave)}</td>)}
+            </tr>
+            {aberto.receitas && d.receitas.map((r, i) => (
+              <tr key={`r${i}`} className="rel-sub">
+                <td>{r.nome}</td>
+                {cols.map(c => <td key={c.chave}>{cell(r.valores, c.chave)}</td>)}
+              </tr>
             ))}
+
+            <tr className="rel-gap"><td colSpan={cols.length + 1}></td></tr>
 
             {/* DESPESAS */}
-            <tr className="rel-header rel-despesa"><td>Despesas</td>
-              {cols.map(m => <td key={m}>{brl(d.total_despesas[m])}</td>)}</tr>
-            {d.despesas.map((c, i) => (
-              <>
-                <tr key={`c${i}`} className="rel-cat"><td>{c.categoria}</td>
-                  {cols.map(m => <td key={m}>{brl(c.total[m])}</td>)}</tr>
-                {c.planos.map((p, j) => (
-                  <tr key={`c${i}p${j}`} className="rel-sub"><td>{p.nome}</td>
-                    {cols.map(m => <td key={m}>{brl(p.valores[m])}</td>)}</tr>
+            <tr className="rel-header rel-despesa rel-clic" onClick={() => toggle("despesas")}>
+              <td><Chevron open={aberto.despesas} /> Despesas</td>
+              {cols.map(c => <td key={c.chave}>{cell(d.total_despesas, c.chave)}</td>)}
+            </tr>
+            {aberto.despesas && d.despesas.map((c, i) => (
+              <FragmentCat key={`cat${i}`}>
+                <tr className="rel-cat rel-clic" onClick={() => toggleCat(i)}>
+                  <td><Chevron open={catAberta[i]} /> {c.categoria}</td>
+                  {cols.map(col => <td key={col.chave}>{cell(c.total, col.chave)}</td>)}
+                </tr>
+                {catAberta[i] && c.planos.map((p, j) => (
+                  <tr key={`c${i}p${j}`} className="rel-sub rel-sub-deep">
+                    <td>{p.nome}</td>
+                    {cols.map(col => <td key={col.chave}>{cell(p.valores, col.chave)}</td>)}
+                  </tr>
                 ))}
-              </>
+              </FragmentCat>
             ))}
+
+            <tr className="rel-gap"><td colSpan={cols.length + 1}></td></tr>
 
             {/* RESULTADO */}
-            <tr className="rel-total"><td>Resultado</td>
-              {cols.map(m => <td key={m}>{brl(d.resultado[m])}</td>)}</tr>
+            <tr className="rel-total rel-resultado">
+              <td>Resultado</td>
+              {cols.map(c => (
+                <td key={c.chave} className={d.resultado[c.chave] >= 0 ? "pos" : "neg"}>
+                  {cell(d.resultado, c.chave)}
+                </td>
+              ))}
+            </tr>
+
+            <tr className="rel-gap"><td colSpan={cols.length + 1}></td></tr>
 
             {/* SALDO INICIAL */}
-            <tr className="rel-header"><td>Saldo Inicial</td>
-              {cols.map(m => <td key={m}>{brl(d.saldo_inicial_total[m])}</td>)}</tr>
-            {d.bancos.map((b, i) => (
-              <tr key={`si${i}`} className="rel-sub"><td>{b.nome}</td>
-                {cols.map(m => <td key={m}>{brl(b.saldo_inicial[m])}</td>)}</tr>
+            <tr className="rel-header rel-clic" onClick={() => toggle("si")}>
+              <td><Chevron open={aberto.si} /> Saldo Inicial</td>
+              {cols.map(c => <td key={c.chave}>{cell(d.saldo_inicial_total, c.chave)}</td>)}
+            </tr>
+            {aberto.si && d.bancos.map((b, i) => (
+              <tr key={`si${i}`} className="rel-sub">
+                <td>{b.nome}</td>
+                {cols.map(c => <td key={c.chave}>{cell(b.saldo_inicial, c.chave)}</td>)}
+              </tr>
             ))}
+
+            <tr className="rel-gap"><td colSpan={cols.length + 1}></td></tr>
 
             {/* SALDO FINAL */}
-            <tr className="rel-header"><td>Saldo Final</td>
-              {cols.map(m => <td key={m}>{brl(d.saldo_final_total[m])}</td>)}</tr>
-            {d.bancos.map((b, i) => (
-              <tr key={`sf${i}`} className="rel-sub"><td>{b.nome}</td>
-                {cols.map(m => <td key={m}>{brl(b.saldo_final[m])}</td>)}</tr>
+            <tr className="rel-header rel-clic" onClick={() => toggle("sf")}>
+              <td><Chevron open={aberto.sf} /> Saldo Final</td>
+              {cols.map(c => <td key={c.chave}>{cell(d.saldo_final_total, c.chave)}</td>)}
+            </tr>
+            {aberto.sf && d.bancos.map((b, i) => (
+              <tr key={`sf${i}`} className="rel-sub">
+                <td>{b.nome}</td>
+                {cols.map(c => <td key={c.chave}>{cell(b.saldo_final, c.chave)}</td>)}
+              </tr>
             ))}
 
+            <tr className="rel-gap"><td colSpan={cols.length + 1}></td></tr>
+
             {/* DIFERENÇAS */}
-            <tr className="rel-total"><td>Diferença de Saldo</td>
-              {cols.map(m => <td key={m}>{brl(d.diferenca_saldo[m])}</td>)}</tr>
-            <tr className="rel-total"><td>Diferença de Conciliação</td>
-              {cols.map(m => (
-                <td key={m} style={{
-                  color: Math.abs(d.diferenca_conciliacao[m]) < 0.01 ? "#22c55e" : "#ef4444"
-                }}>{brl(d.diferenca_conciliacao[m])}</td>
-              ))}</tr>
+            <tr className="rel-total">
+              <td>Diferença de Saldo</td>
+              {cols.map(c => <td key={c.chave}>{cell(d.diferenca_saldo, c.chave)}</td>)}
+            </tr>
+            <tr className="rel-total">
+              <td>Diferença de Conciliação</td>
+              {cols.map(c => (
+                <td key={c.chave} style={{
+                  color: Math.abs(d.diferenca_conciliacao[c.chave]) < 0.01 ? "#2ee6a0" : "#ff4d5a"
+                }}>{cell(d.diferenca_conciliacao, c.chave)}</td>
+              ))}
+            </tr>
           </tbody>
         </table>
       </div>
     </div>
   );
+}
+
+// wrapper para agrupar linhas da categoria sem <> com key
+function FragmentCat({ children }) {
+  return <>{children}</>;
 }
